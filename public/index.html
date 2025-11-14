@@ -1,32 +1,134 @@
 <!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Hello, World!</title>
-	</head>
-	<body>
-		<h1 id="heading"></h1>
-		<p>This page comes from a static asset stored at `public/index.html` as configured in `wrangler.jsonc`.</p>
-		<button id="button" type="button">Fetch a random UUID</button>
-		<output id="random" for="button"></output>
-		<script>
-			fetch('/message')
-				.then((resp) => resp.text())
-				.then((text) => {
-					const h1 = document.getElementById('heading');
-					h1.textContent = text;
-				});
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D1 Dairy ERP Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css" rel="stylesheet">
+  </head>
+  <body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+      <div class="container">
+        <a class="navbar-brand fw-semibold" href="#"><i class="fa-solid fa-cow me-2"></i>D1 Dairy ERP</a>
+      </div>
+    </nav>
 
-			const button = document.getElementById("button");
-			button.addEventListener("click", () => {
-				fetch('/random')
-					.then((resp) => resp.text())
-					.then((text) => {
-						const random = document.getElementById('random');
-						random.textContent = text;
-					});
-			});
-		</script>
-	</body>
+    <main class="container my-4">
+      <div class="row g-4">
+        <div class="col-12 col-lg-8">
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-3">
+                <h5 class="card-title mb-0"><i class="fa-solid fa-glass-water me-2"></i>Milk Summary</h5>
+                <button id="refreshSummary" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-rotate me-1"></i>Refresh</button>
+              </div>
+              <div id="summary" class="row text-center">
+                <div class="col-4">
+                  <div class="p-3 border rounded bg-white">
+                    <div class="text-muted small"><i class="fa-solid fa-scale-balanced me-1"></i>Total Milk (KG)</div>
+                    <div id="sumMilk" class="display-6">--</div>
+                  </div>
+                </div>
+                <div class="col-4">
+                  <div class="p-3 border rounded bg-white">
+                    <div class="text-muted small"><i class="fa-solid fa-industry me-1"></i>Factories</div>
+                    <div id="sumFactories" class="display-6">--</div>
+                  </div>
+                </div>
+                <div class="col-4">
+                  <div class="p-3 border rounded bg-white">
+                    <div class="text-muted small"><i class="fa-solid fa-tractor me-1"></i>Farmers</div>
+                    <div id="sumFarmers" class="display-6">--</div>
+                  </div>
+                </div>
+              </div>
+              <div class="text-muted small mt-3">Last updated: <span id="sumUpdated">--</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-lg-4">
+          <div class="card shadow-sm h-100">
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-3">
+                <h5 class="card-title mb-0"><i class="fa-solid fa-database me-2"></i>Database Health</h5>
+                <button id="refreshHealth" class="btn btn-sm btn-outline-success"><i class="fa-solid fa-heart-pulse me-1"></i>Check</button>
+              </div>
+              <div id="healthStatus" class="mb-2 fw-semibold">Status: <span class="text-muted"><i class="fa-regular fa-circle me-1"></i>--</span></div>
+              <div>
+                <div class="text-muted small mb-1">Tables</div>
+                <ul id="tables" class="list-group list-group-flush small"></ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-4 mt-1">
+        <div class="col-12">
+          <div class="alert alert-info mb-0" role="alert">
+            This page is served from <code>public/index.html</code> and queries the Worker endpoints <code>/summary</code> and <code>/health</code>.
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      async function loadSummary() {
+        const btn = document.getElementById('refreshSummary');
+        try {
+          btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Loading';
+          const resp = await fetch('/summary');
+          if (!resp.ok) throw new Error('Failed to load summary');
+          const data = await resp.json();
+          document.getElementById('sumMilk').textContent = data.total_milk_kg ?? '--';
+          document.getElementById('sumFactories').textContent = data.factories ?? '--';
+          document.getElementById('sumFarmers').textContent = data.farmers ?? '--';
+          document.getElementById('sumUpdated').textContent = data.last_updated ?? '--';
+        } catch (e) {
+          console.error(e);
+          document.getElementById('sumMilk').textContent = 'ERR';
+          document.getElementById('sumFactories').textContent = 'ERR';
+          document.getElementById('sumFarmers').textContent = 'ERR';
+        } finally {
+          btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-rotate me-1"></i>Refresh';
+        }
+      }
+
+      async function loadHealth() {
+        const btn = document.getElementById('refreshHealth');
+        try {
+          btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-stethoscope me-1"></i>Checking';
+          const resp = await fetch('/health');
+          if (!resp.ok) throw new Error('Failed to load health');
+          const data = await resp.json();
+          const ok = (data.status || '').toUpperCase().includes('HEALTH');
+          const statusHTML = ok
+            ? '<span class="text-success"><i class="fa-regular fa-circle-check me-1"></i>HEALTHY</span>'
+            : '<span class="text-danger"><i class="fa-regular fa-circle-xmark me-1"></i>ERROR</span>';
+          document.getElementById('healthStatus').innerHTML = `Status: ${statusHTML}`;
+          const list = document.getElementById('tables');
+          list.innerHTML = '';
+          (data.tables || []).forEach(t => {
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex align-items-center gap-2';
+            li.innerHTML = `<i class="fa-solid fa-table text-secondary"></i><span>${t}</span>`;
+            list.appendChild(li);
+          });
+        } catch (e) {
+          console.error(e);
+          document.getElementById('healthStatus').innerHTML = 'Status: <span class="text-danger"><i class="fa-regular fa-circle-xmark me-1"></i>ERROR</span>';
+        } finally {
+          btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-heart-pulse me-1"></i>Check';
+        }
+      }
+
+      document.getElementById('refreshSummary').addEventListener('click', loadSummary);
+      document.getElementById('refreshHealth').addEventListener('click', loadHealth);
+      // Initial load
+      loadSummary();
+      loadHealth();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+  </body>
 </html>
