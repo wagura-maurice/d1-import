@@ -1,3 +1,4 @@
+// src/index.ts
 export default {
   async fetch(request: Request, env: any) {
     const url = new URL(request.url);
