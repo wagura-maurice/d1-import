@@ -4,9 +4,19 @@ export default {
     const db = env.DB;
 
     if (url.pathname === "/summary") {
-      const [{ total_milk = 0 }] = await db.prepare("SELECT COALESCE(SUM(net_units), 0) AS total_milk FROM produce").all();
-      const [{ factory_count = 0 }] = await db.prepare("SELECT COUNT(*) AS factory_count FROM factories").all();
-      const [{ farmer_count = 0 }] = await db.prepare("SELECT COUNT(*) AS farmer_count FROM farmers").all();
+      const { results: milkRows } = await db
+        .prepare("SELECT COALESCE(SUM(net_units), 0) AS total_milk FROM produce")
+        .all();
+      const { results: factoryRows } = await db
+        .prepare("SELECT COUNT(*) AS factory_count FROM factories")
+        .all();
+      const { results: farmerRows } = await db
+        .prepare("SELECT COUNT(*) AS farmer_count FROM farmers")
+        .all();
+
+      const total_milk = milkRows?.[0]?.total_milk ?? 0;
+      const factory_count = factoryRows?.[0]?.factory_count ?? 0;
+      const farmer_count = farmerRows?.[0]?.farmer_count ?? 0;
 
       return Response.json({
         dairy_summary: "KG-ERP Live on Cloudflare D1",
