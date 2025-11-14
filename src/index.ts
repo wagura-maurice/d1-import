@@ -28,6 +28,27 @@ export default {
       }, { headers: { "Content-Type": "application/json" } });
     }
 
+    if (url.pathname === "/ai") {
+      try {
+        const q = url.searchParams.get("q") || "";
+        if (!q) {
+          return Response.json({ error: "Missing query 'q'" }, { status: 400 });
+        }
+        const model = "@cf/meta/llama-3-8b-instruct";
+        const systemPrompt = "You are a helpful assistant for a Dairy ERP. Keep answers concise and relevant to dairy, milk totals, factories, and farmers.";
+        const result: any = await env.AI.run(model, {
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: q }
+          ]
+        });
+        const answer = result?.response || result?.result || result?.text || "";
+        return Response.json({ model, query: q, answer });
+      } catch (e: any) {
+        return Response.json({ error: e?.message || "AI error" }, { status: 500 });
+      }
+    }
+
     if (url.pathname === "/health") {
       const tables = await db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE '_cf_%' AND name != 'sqlite_sequence' ORDER BY name").all();
       return Response.json({
