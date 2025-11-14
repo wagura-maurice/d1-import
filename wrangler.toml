@@ -1,0 +1,8 @@
+name = "d1-import"
+compatibility_date = "2025-11-14"
+main = "src/index.ts"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "dairy-db"
+database_id = "39d79b40-e330-43fc-a7a5-f1efd5263b9d"
