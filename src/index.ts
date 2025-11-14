@@ -1,26 +1,35 @@
-/**
- * Welcome to Cloudflare Workers! This is your first worker.
- *
- * - Run `npm run dev` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your worker in action
- * - Run `npm run deploy` to publish your worker
- *
- * Bind resources to your worker in `wrangler.jsonc`. After adding bindings, a type definition for the
- * `Env` object can be regenerated with `npm run cf-typegen`.
- *
- * Learn more at https://developers.cloudflare.com/workers/
- */
-
 export default {
-	async fetch(request, env, ctx): Promise<Response> {
-		const url = new URL(request.url);
-		switch (url.pathname) {
-			case '/message':
-				return new Response('Hello, World!');
-			case '/random':
-				return new Response(crypto.randomUUID());
-			default:
-				return new Response('Not Found', { status: 404 });
-		}
-	},
-} satisfies ExportedHandler<Env>;
+  async fetch(request: Request, env: any) {
+    const url = new URL(request.url);
+    const db = env.DB;
+
+    if (url.pathname === "/summary") {
+      const [{ total_milk = 0 }] = await db.prepare("SELECT COALESCE(SUM(net_units), 0) AS total_milk FROM produce").all();
+      const [{ factory_count = 0 }] = await db.prepare("SELECT COUNT(*) AS factory_count FROM factories").all();
+      const [{ farmer_count = 0 }] = await db.prepare("SELECT COUNT(*) AS farmer_count FROM farmers").all();
+
+      return Response.json({
+        dairy_summary: "KG-ERP Live on Cloudflare D1",
+        total_milk_kg: Number(total_milk).toFixed(2),
+        factories: Number(factory_count),
+        farmers: Number(farmer_count),
+        last_updated: new Date().toISOString()
+      }, { headers: { "Content-Type": "application/json" } });
+    }
+
+    if (url.pathname === "/health") {
+      const tables = await db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE '_cf_%' AND name != 'sqlite_sequence' ORDER BY name").all();
+      return Response.json({
+        status: "DB HEALTHY",
+        tables: tables.results.map((r: any) => r.name),
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    return new Response(`
+      <h1>D1 Dairy ERP</h1>
+      <p><a href="/health">Health Check</a> | <a href="/summary">Milk Summary</a></p>
+      <p>AI Query API coming soon...</p>
+    `, { headers: { "Content-Type": "text/html" } });
+  }
+};
