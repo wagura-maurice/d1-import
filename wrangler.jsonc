@@ -16,7 +16,17 @@
 	},
 	"observability": {
 		"enabled": true
-	}
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "dairy-db",
+			"database_id": "39d79b40-e330-43fc-a7a5-f1efd5263b9d"
+		}
+	],
+	"dev": {
+		"port": 8788
+	},
 	/**
 	 * Smart Placement
 	 * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
